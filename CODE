@@ -1,0 +1,302 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+sns.set()
+
+raw_data = pd.read_csv('file:///Users/chrismembrey/Desktop/titanic_data.csv')
+raw_data.head(10)
+
+raw_data.describe(include = 'all')
+
+raw_data.columns
+
+raw_data.info()
+
+data = raw_data.drop(['PassengerId', 'Name', 'Cabin'], axis = 1)
+
+data.head(10)
+
+data.rename(columns ={'SibSp' : 'Number of Siblings/Spouses Aboard' ,
+                     'Parch': 'Number of Parents/Children Aboard'}, inplace = True)
+
+data.rename(columns = {'Fare' : 'Ticket Price'}, inplace= True)
+data.head()
+
+data['Sex'] = data['Sex'].map({'female': 0 , 'male': 1 })
+data.head()
+
+data = data.dropna(subset = ['Age'], axis = 0)
+data = data.dropna(subset = ['Embarked'], axis = 0)
+data.describe(include = 'all')
+
+#for embarked (C = Cherbourg; Q = Queenstown; S = Southampton)
+
+embarked_grouping = data.groupby(by = ['Embarked']).mean()
+
+bins = np.linspace(data.Age.min(), data.Age.max(), 10)
+hist = sns.FacetGrid(data , col = "Sex", hue = 'Survived', palette = "Set1", col_wrap = 2)
+hist.map(plt.hist, 'Age', bins = bins, alpha = 0.5)
+plt.legend()
+
+bins = np.linspace(data.Age.min(), data.Age.max(), 10)
+hist = sns.FacetGrid(data , col = "Pclass", hue = 'Survived', palette = "Set1", col_wrap = 2)
+hist.map(plt.hist, 'Age', bins = bins, alpha = 0.5)
+plt.legend()
+
+sns.barplot(x = 'Pclass', y = 'Survived', data = data)
+
+import scipy.stats
+
+df_anova = data[['Survived', 'Pclass']]
+grouped_anova = df_anova.groupby(by = 'Pclass')
+anova_results = scipy.stats.f_oneway(grouped_anova.get_group(1)['Survived'] , grouped_anova.get_group(2)['Survived'],
+                              grouped_anova.get_group(3)['Survived'])
+anova_results
+
+bins = np.linspace(data.Age.min(), data.Age.max(), 10)
+hist = sns.FacetGrid(data , col = "Embarked", hue = 'Survived', palette = "Set1", col_wrap = 2)
+hist.map(plt.hist, 'Age', bins = bins, alpha = 0.5)
+plt.legend()
+
+g = sns.FacetGrid(data, col = 'Embarked', legend_out = True, palette = "Set1")
+g.map(sns.barplot,'Survived', alpha = 0.5, order=None, hue_order=None)
+g.add_legend()
+
+embarked_bar = data[['Survived', 'Embarked']].groupby(by = 'Embarked').mean()
+print(embarked_bar)
+embarked_bar = embarked_bar.sort_values(by = 'Survived')
+embarked_bar.plot(kind = 'barh', color = 'violet', alpha = 0.7)
+
+sns.barplot(x = 'Embarked' , y = 'Survived', data = data)
+
+import scipy.stats
+
+df_anova = data[['Survived', 'Embarked']]
+grouped_anova = df_anova.groupby(by = 'Embarked')
+anova_results = scipy.stats.f_oneway(grouped_anova.get_group('S')['Survived'] , grouped_anova.get_group('C')['Survived'],
+                              grouped_anova.get_group('Q')['Survived'])
+anova_results
+
+
+
+data.Embarked = data.Embarked.map({'C':0 , 'Q':1 ,'S':2})
+
+#logistic model with sex pclass embarked and ticket price
+
+y = np.asarray(data.Survived)
+
+x = np.asarray(data[['Sex', 'Pclass', 'Ticket Price', 'Embarked']])
+
+
+from sklearn.preprocessing import StandardScaler
+SCALE = StandardScaler()
+x_scaled = SCALE.fit(x).transform(x)
+
+from sklearn.model_selection import train_test_split
+x_train , x_test , y_train , y_test = train_test_split(x_scaled , y , test_size = 0.2 , random_state = 0)
+
+from sklearn.linear_model import LogisticRegression
+model = LogisticRegression(C = 0.01 , solver = 'liblinear').fit(x_train , y_train)
+
+yhat = model.predict(x_test)
+yhat_prob = model.predict_proba(x_test)
+
+from sklearn.metrics import jaccard_score
+print(jaccard_score(y_test, yhat))
+from sklearn.metrics import accuracy_score
+print(accuracy_score(y_test, yhat))
+from sklearn.metrics import log_loss
+log_loss(y_test,yhat_prob)
+
+#logistic model with sex pclass embarked
+
+y = np.asarray(data.Survived)
+
+x = np.asarray(data[['Sex', 'Pclass', 'Embarked']])
+
+
+from sklearn.preprocessing import StandardScaler
+SCALE = StandardScaler()
+x_scaled = SCALE.fit(x).transform(x)
+
+from sklearn.model_selection import train_test_split
+x_train , x_test , y_train , y_test = train_test_split(x_scaled , y , test_size = 0.2 , random_state = 0)
+
+from sklearn.linear_model import LogisticRegression
+model = LogisticRegression(C = 0.01 , solver = 'liblinear').fit(x_train , y_train)
+
+yhat = model.predict(x_test)
+yhat_prob = model.predict_proba(x_test)
+
+from sklearn.metrics import jaccard_score
+print(jaccard_score(y_test, yhat))
+from sklearn.metrics import accuracy_score
+print(accuracy_score(y_test, yhat))
+from sklearn.metrics import log_loss
+log_loss(y_test, yhat_prob)
+
+#logistic model with sex pclass embarked and age
+
+y = np.asarray(data.Survived)
+
+x = np.asarray(data[['Sex', 'Pclass', 'Embarked', 'Age']])
+
+
+from sklearn.preprocessing import StandardScaler
+SCALE = StandardScaler()
+x_scaled = SCALE.fit(x).transform(x)
+
+from sklearn.model_selection import train_test_split
+x_train , x_test , y_train , y_test = train_test_split(x_scaled , y , test_size = 0.2 , random_state = 0)
+
+from sklearn.linear_model import LogisticRegression
+model = LogisticRegression(C = 0.01 , solver = 'liblinear').fit(x_train , y_train)
+
+yhat = model.predict(x_test)
+yhat_prob = model.predict_proba(x_test)
+
+from sklearn.metrics import jaccard_score
+print(jaccard_score(y_test, yhat))
+from sklearn.metrics import accuracy_score
+print(accuracy_score(y_test, yhat))
+from sklearn.metrics import log_loss
+log_loss(y_test, yhat_prob)
+
+# add number of siblings
+
+y = np.asarray(data.Survived)
+
+x = np.asarray(data[['Sex', 'Pclass', 'Embarked', 'Age', 'Number of Siblings/Spouses Aboard']])
+
+
+from sklearn.preprocessing import StandardScaler
+SCALE = StandardScaler()
+x_scaled = SCALE.fit(x).transform(x)
+
+from sklearn.model_selection import train_test_split
+x_train , x_test , y_train , y_test = train_test_split(x_scaled , y , test_size = 0.2 , random_state = 0)
+
+from sklearn.linear_model import LogisticRegression
+model = LogisticRegression(C = 0.01 , solver = 'liblinear').fit(x_train , y_train)
+
+yhat = model.predict(x_test)
+yhat_prob = model.predict_proba(x_test)
+
+from sklearn.metrics import jaccard_score
+print(jaccard_score(y_test, yhat))
+from sklearn.metrics import accuracy_score
+print(accuracy_score(y_test, yhat))
+from sklearn.metrics import log_loss
+print(log_loss(y_test, yhat_prob))
+
+# then add number of parents
+
+y = np.asarray(data.Survived)
+
+x = np.asarray(data[['Sex', 'Pclass', 'Embarked', 'Age','Number of Parents/Children Aboard']])
+
+
+from sklearn.preprocessing import StandardScaler
+SCALE = StandardScaler()
+x_scaled = SCALE.fit(x).transform(x)
+
+from sklearn.model_selection import train_test_split
+x_train , x_test , y_train , y_test = train_test_split(x_scaled , y , test_size = 0.2 , random_state = 0)
+
+from sklearn.linear_model import LogisticRegression
+model = LogisticRegression(C = 0.01 , solver = 'liblinear').fit(x_train , y_train)
+
+yhat = model.predict(x_test)
+yhat_prob = model.predict_proba(x_test)
+
+from sklearn.metrics import jaccard_score
+print(jaccard_score(y_test, yhat))
+from sklearn.metrics import accuracy_score
+print(accuracy_score(y_test, yhat))
+from sklearn.metrics import log_loss
+print(log_loss(y_test, yhat_prob))
+
+# then add both 
+
+y = np.asarray(data.Survived)
+
+x = np.asarray(data[['Sex', 'Pclass', 'Embarked', 'Age', 'Number of Siblings/Spouses Aboard', 'Number of Parents/Children Aboard']])
+
+
+from sklearn.preprocessing import StandardScaler
+SCALE = StandardScaler()
+x_scaled = SCALE.fit(x).transform(x)
+
+from sklearn.model_selection import train_test_split
+x_train , x_test , y_train , y_test = train_test_split(x_scaled , y , test_size = 0.2 , random_state = 0)
+
+from sklearn.linear_model import LogisticRegression
+model = LogisticRegression(C = 0.01 , solver = 'liblinear').fit(x_train , y_train)
+
+yhat = model.predict(x_test)
+yhat_prob = model.predict_proba(x_test)
+
+from sklearn.metrics import jaccard_score
+print(jaccard_score(y_test, yhat))
+from sklearn.metrics import accuracy_score
+print(accuracy_score(y_test, yhat))
+from sklearn.metrics import log_loss
+print(log_loss(y_test, yhat_prob))
+
+#coefficients for model with parents/childeren are:
+
+y = np.asarray(data.Survived)
+
+x = np.asarray(data[['Sex', 'Pclass', 'Embarked', 'Age','Number of Parents/Children Aboard']])
+
+
+from sklearn.preprocessing import StandardScaler
+SCALE = StandardScaler()
+x_scaled = SCALE.fit(x).transform(x)
+
+from sklearn.model_selection import train_test_split
+x_train , x_test , y_train , y_test = train_test_split(x_scaled , y , test_size = 0.2 , random_state = 0)
+
+from sklearn.linear_model import LogisticRegression
+model = LogisticRegression(C = 0.01 , solver = 'liblinear').fit(x_train , y_train)
+
+yhat = model.predict(x_test)
+yhat_prob = model.predict_proba(x_test)
+
+
+print(model.coef_)
+print(model.intercept_)
+
+
+#coefficients for other model with similar accuracy are:
+
+y = np.asarray(data.Survived)
+
+x = np.asarray(data[['Sex', 'Pclass', 'Embarked', 'Age']])
+
+
+from sklearn.preprocessing import StandardScaler
+SCALE = StandardScaler()
+x_scaled = SCALE.fit(x).transform(x)
+
+from sklearn.model_selection import train_test_split
+x_train , x_test , y_train , y_test = train_test_split(x_scaled , y , test_size = 0.2 , random_state = 0)
+
+from sklearn.linear_model import LogisticRegression
+model = LogisticRegression(C = 0.01 , solver = 'liblinear').fit(x_train , y_train)
+
+yhat = model.predict(x_test)
+yhat_prob = model.predict_proba(x_test)
+
+print(model.coef_)
+print('\n' , model.intercept_)
+
+#lets find the pvalues for each variable
+
+import statsmodels.api as sm 
+
+x = sm.add_constant(x_train)
+reg_log = sm.Logit(y_train,x_train)
+model_log = reg_log.fit()
+results = model_log.summary()
